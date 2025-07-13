@@ -18,7 +18,7 @@ export const GRADE_COLORS = {
   Epic: 'border-purple-500', 'Epic+': 'border-purple-500',
   Legendary: 'border-yellow-400', 'Legendary+': 'border-yellow-400',
   Eternal: 'border-red-500', 'Eternal+': 'border-red-500',
-  Origin: 'border-fuchsia-400',
+  Origin: 'border-fuchsia-300',
 };
 
 export const GRADE_NAMES_KO = {
