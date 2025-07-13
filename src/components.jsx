@@ -34,7 +34,12 @@ export const Toast = ({ toast, onDismiss }) => {
 
 export const ToastContainer = ({ toasts, onDismiss }) => {
   return createPortal(
-    <div className="fixed top-5 right-5 z-50 w-full max-w-sm space-y-2">
+    /*
+      [수정] 토스트 메시지가 화면 중앙에 나타나도록 위치 관련 클래스를 수정했습니다.
+      - 'right-5'를 제거하고 'left-1/2 -translate-x-1/2'를 추가하여 수평 중앙 정렬합니다.
+      - 'flex flex-col items-center'를 추가하여 내부 토스트들도 컨테이너 중앙에 오도록 합니다.
+    */
+    <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm space-y-2 flex flex-col items-center">
       {toasts.map((toast) => (
         <Toast
           key={toast.id}
@@ -158,9 +163,6 @@ export const CinematicPhase = ({ onComplete }) => {
       <h3 className={`text-xl font-bold text-center ${titleColor} mb-4`}>
         {GRADE_NAMES_KO[to.grade]} 재료 만들기
       </h3>
-      {/* [수정] flex-wrap 클래스를 제거하여 모바일에서 줄바꿈이 일어나지 않도록 수정했습니다.
-        이제 요소들이 항상 한 줄에 표시됩니다.
-      */}
       <div className="flex justify-center items-center gap-2 sm:gap-4">
         <CharacterCard card={from} />
         <p className="text-2xl sm:text-3xl font-bold text-gray-800">
