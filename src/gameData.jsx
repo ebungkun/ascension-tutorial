@@ -17,7 +17,7 @@ export const GRADE_COLORS = {
   Rare: 'border-sky-400', 'Rare+': 'border-sky-400',
   Epic: 'border-purple-500', 'Epic+': 'border-purple-500',
   Legendary: 'border-yellow-400', 'Legendary+': 'border-yellow-400',
-  Eternal: 'border-red-500', 'Eternal+': 'border-red-500',
+  Eternal: 'border-rose-400', 'Eternal+': 'border-rose-400',
   Origin: 'border-fuchsia-300',
 };
 
