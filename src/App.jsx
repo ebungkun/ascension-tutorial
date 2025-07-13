@@ -88,7 +88,13 @@ function tutorialReducer(state, action) {
         action.payload.forEach(promo => {
             const cardsToConsume = newInventory.filter(c => c.name === promo.name && c.grade === 'Epic').slice(0, promo.consumeCount);
             newInventory = newInventory.filter(c => !cardsToConsume.some(consumed => consumed.id === c.id));
-            for (let i = 0; i < promo.createCount; i++) newInventory.push(createCard(promo.name, 'Epic+', `auto-${i}`));
+            // [수정 1] 카드 ID 중복 버그 해결
+            // createCard 호출 시 세 번째 인자인 idSuffix를 제거했습니다.
+            // 이렇게 하면 createCard 함수가 Date.now()와 Math.random()을 이용해
+            // 항상 고유한 ID를 생성하므로, ID 중복 문제가 발생하지 않습니다.
+            for (let i = 0; i < promo.createCount; i++) {
+              newInventory.push(createCard(promo.name, 'Epic+'));
+            }
         });
         return { ...state, inventory: newInventory, feedback: { type: 'success', text: '자동 승급이 완료되었습니다!' } };
     }
@@ -227,7 +233,11 @@ export default function App() {
                   <div className="w-full max-w-5xl bg-gray-50 p-2 sm:p-4 md:p-6 rounded-2xl shadow-lg border border-gray-300 min-h-[200px]">
                     <div className="flex justify-between items-center mb-3 sm:mb-4 px-2">
                         <h2 className="text-xl sm:text-2xl font-bold text-center text-gray-800 flex-grow">보유 정령</h2>
-                        <button onClick={() => { setIsAutoPromoModalOpen(true); setShouldHighlightAutoPromo(false); }} disabled={possiblePromotions.length === 0} className={`bg-blue-500 text-white font-bold py-2 px-3 rounded-lg shadow-md hover:bg-blue-600 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm relative ${shouldHighlightAutoPromo ? 'animate-pulse-button' : ''}`}>자동 승급</button>
+                        {/* [수정 2] 자동 승급 버튼 비활성화 조건 추가
+                            - || !!mainSlot 조건을 추가하여, 승급 대상 슬롯(mainSlot)에 카드가 있을 경우
+                              자동 승급 버튼이 비활성화되도록 수정했습니다.
+                        */}
+                        <button onClick={() => { setIsAutoPromoModalOpen(true); setShouldHighlightAutoPromo(false); }} disabled={possiblePromotions.length === 0 || !!mainSlot} className={`bg-blue-500 text-white font-bold py-2 px-3 rounded-lg shadow-md hover:bg-blue-600 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm relative ${shouldHighlightAutoPromo ? 'animate-pulse-button' : ''}`}>자동 승급</button>
                     </div>
                     {!mainSlot && inventory.length > 0 && <p className="text-center text-blue-600 mb-4 font-semibold animate-pulse">승급시킬 정령을 선택해 주세요.</p>}
                     {inventory.length > 0 ? (<div className="flex flex-wrap gap-2 sm:gap-4 justify-center">{inventory.map(card => (<CharacterCard key={card.id} card={card} size="small" onClick={() => handleCardClick(card)} />))}</div>) : (<p className="text-center text-gray-600 pt-8">모든 정령을 사용했습니다!</p> )}
