@@ -158,7 +158,10 @@ export const CinematicPhase = ({ onComplete }) => {
       <h3 className={`text-xl font-bold text-center ${titleColor} mb-4`}>
         {GRADE_NAMES_KO[to.grade]} 재료 만들기
       </h3>
-      <div className="flex justify-center items-center gap-2 sm:gap-4 flex-wrap">
+      {/* [수정] flex-wrap 클래스를 제거하여 모바일에서 줄바꿈이 일어나지 않도록 수정했습니다.
+        이제 요소들이 항상 한 줄에 표시됩니다.
+      */}
+      <div className="flex justify-center items-center gap-2 sm:gap-4">
         <CharacterCard card={from} />
         <p className="text-2xl sm:text-3xl font-bold text-gray-800">
           x {count}
