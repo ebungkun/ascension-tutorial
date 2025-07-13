@@ -232,6 +232,11 @@ export default function App() {
                     {!mainSlot && inventory.length > 0 && <p className="text-center text-blue-600 mb-4 font-semibold animate-pulse">승급시킬 정령을 선택해 주세요.</p>}
                     {inventory.length > 0 ? (<div className="flex flex-wrap gap-2 sm:gap-4 justify-center">{inventory.map(card => (<CharacterCard key={card.id} card={card} size="small" onClick={() => handleCardClick(card)} />))}</div>) : (<p className="text-center text-gray-600 pt-8">모든 정령을 사용했습니다!</p> )}
                   </div>
+                  
+                  <footer className="text-center py-4 text-zinc-500 text-sm mt-10">
+                    <p>제작자: 에붕소울 (아카라이브 에버소울 채널)</p>
+                  </footer>
+
                   <style>{`
                     body, #root { word-break: keep-all; }
                     @keyframes fade-in-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
