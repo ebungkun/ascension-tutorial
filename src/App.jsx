@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useReducer } from 'react';
+import React, { useState, useEffect, useMemo, useReducer, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { 
     GRADE_COLORS, 
@@ -9,7 +9,7 @@ import {
     MATERIAL_SOUL_A_NAME,
     MATERIAL_SOUL_B_NAME,
 } from './gameData';
-import plusStar from './assets/plus_star.png'; // 1. 별 모양 아이콘 이미지 임포트
+import plusStar from './assets/plus_star.png';
 
 // --- 상태 관리 (useReducer) ---
 
@@ -26,6 +26,7 @@ const initialState = {
 };
 
 function tutorialReducer(state, action) {
+  // 상태 변경 로직은 이전과 동일합니다.
   switch (action.type) {
     case 'START_CINEMATIC':
       return { ...state, tutorialPhase: 'cinematic', message: null };
@@ -129,21 +130,39 @@ const Toast = ({ message, type, onDismiss }) => {
     );
 };
 
-const CharacterCard = React.forwardRef(({ card, isDragging, isGhost, isNew, ...props }, ref) => {
+const CharacterCard = React.forwardRef(({ card, isDragging, isGhost, isNew, size = 'large', ...props }, ref) => {
   if (!card) return null;
   const borderColor = GRADE_COLORS[card.grade] || 'border-gray-400';
   const hasPlus = card.grade.includes('+');
+
+  // 2. 카드 사이즈에 따른 반응형 클래스 정의
+  const sizeStyles = {
+    large: {
+      container: 'w-24 h-32',
+      image: 'w-16 h-16',
+      name: 'text-sm',
+      grade: 'text-xs',
+      star: 'w-8 h-8 -mt-3 -mr-3',
+    },
+    small: {
+      container: 'w-20 h-28',
+      image: 'w-12 h-12',
+      name: 'text-xs',
+      grade: 'text-[10px]',
+      star: 'w-6 h-6 -mt-2 -mr-2',
+    },
+  };
+  const styles = sizeStyles[size] || sizeStyles.large;
+
   return (
     <div ref={ref} style={isGhost ? { position: 'fixed', pointerEvents: 'none', zIndex: 1000, transform: 'scale(1.1)', ...props.style } : {}}
-      className={`relative w-24 h-32 bg-gray-50 rounded-lg border-4 ${borderColor} shadow-md flex flex-col items-center justify-center p-1 transition-all duration-200 ${isDragging ? 'opacity-30 scale-95' : 'opacity-100'} ${isNew ? 'animate-new-card-pop' : ''}`} {...props}>
-      {/* 3. 이미지 자체의 드래그를 방지 */}
-      <img src={card.img} alt={card.name} className="w-16 h-16 rounded-md object-cover" draggable="false" />
-      <p className="text-gray-900 text-sm font-bold mt-1 truncate">{card.name}</p>
-      <p className="text-gray-600 text-xs">{GRADE_NAMES_KO[card.grade] || card.grade}</p>
+      className={`relative ${styles.container} bg-gray-50 rounded-lg border-4 ${borderColor} shadow-md flex flex-col items-center justify-center p-1 transition-all duration-200 touch-none ${isDragging ? 'opacity-30 scale-95' : 'opacity-100'} ${isNew ? 'animate-new-card-pop' : ''}`} {...props}>
+      <img src={card.img} alt={card.name} className={`${styles.image} rounded-md object-cover`} draggable="false" />
+      <p className={`text-gray-900 font-bold mt-1 truncate ${styles.name}`}>{card.name}</p>
+      <p className={`text-gray-600 ${styles.grade}`}>{GRADE_NAMES_KO[card.grade] || card.grade}</p>
       {hasPlus && (
-        <div className="absolute top-0 right-0 -mt-3 -mr-3">
-          {/* 1. SVG를 이미지로 교체 */}
-          <img src={plusStar} alt="Plus Star" className="w-8 h-8 drop-shadow-lg" />
+        <div className={`absolute top-0 right-0 ${styles.star}`}>
+          <img src={plusStar} alt="Plus Star" className="w-full h-full drop-shadow-lg" />
         </div>
       )}
       {isNew && <div className="absolute top-0 left-0 -mt-2 -ml-2 bg-blue-500 text-white text-xs font-bold rounded-full px-2 py-1 shadow-sm">NEW</div>}
@@ -194,6 +213,7 @@ export default function App() {
   const [state, dispatch] = useReducer(tutorialReducer, initialState);
   const { tutorialPhase, inventory, mainSlot, materialSlots, draggedItem, feedback, message, toast, newlyCreatedCard } = state;
   const [touchGhost, setTouchGhost] = useState(null);
+  const touchOffset = useRef({ x: 0, y: 0 });
 
   const currentPromotionRule = useMemo(() => {
     if (!mainSlot) return null;
@@ -252,17 +272,50 @@ export default function App() {
   };
 
   const handleDragStart = (e, card, source, sourceIndex = null) => { dispatch({ type: 'SET_DRAGGED_ITEM', payload: { card, source, sourceIndex } }); e.dataTransfer.effectAllowed = 'move'; };
-  const handleTouchStart = (e, card, source, sourceIndex = null) => { if (e.cancelable) e.preventDefault(); const touch = e.touches[0]; dispatch({ type: 'SET_DRAGGED_ITEM', payload: { card, source, sourceIndex } }); setTouchGhost({ card, x: touch.clientX, y: touch.clientY }); };
-  const handleTouchMove = (e) => { if (!draggedItem) return; const touch = e.touches[0]; setTouchGhost(prev => ({ ...prev, x: touch.clientX, y: touch.clientY })); };
-  const handleDrop = (e, destination, destinationIndex = null) => { e.preventDefault(); handleDropLogic(destination, destinationIndex); dispatch({ type: 'CLEAR_DRAGGED_ITEM' }); };
-  const handleTouchEnd = (e) => { if (!draggedItem) return; const touch = e.changedTouches[0]; setTouchGhost(null); const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY); const findSlot = (element) => { if (!element) return null; if (element.dataset.droptarget) return element.dataset; return findSlot(element.parentElement); }; const targetInfo = findSlot(dropTarget); if (targetInfo) { handleDropLogic(targetInfo.droptarget, targetInfo.index ? parseInt(targetInfo.index) : null); } dispatch({ type: 'CLEAR_DRAGGED_ITEM' }); };
-  const handleDragOver = (e) => e.preventDefault();
-  // 2. 드래그 종료 시 항상 상태를 초기화하는 핸들러 추가
-  const handleGlobalDragEnd = () => {
+  
+  const handleTouchStart = (e, card, source, sourceIndex = null) => {
+    const touch = e.touches[0];
+    const rect = e.currentTarget.getBoundingClientRect();
+    touchOffset.current = { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+    
+    dispatch({ type: 'SET_DRAGGED_ITEM', payload: { card, source, sourceIndex } });
+    setTouchGhost({ card, x: touch.clientX - touchOffset.current.x, y: touch.clientY - touchOffset.current.y });
+  };
+  
+  const handleTouchMove = (e) => {
+    if (!draggedItem) return;
+    const touch = e.touches[0];
+    setTouchGhost(prev => ({ ...prev, x: touch.clientX - touchOffset.current.x, y: touch.clientY - touchOffset.current.y }));
+  };
+
+  const handleDrop = (e, destination, destinationIndex = null) => { e.preventDefault(); handleDropLogic(destination, destinationIndex); };
+  
+  const handleEndDrag = () => {
     if (draggedItem) {
       dispatch({ type: 'CLEAR_DRAGGED_ITEM' });
     }
+    if (touchGhost) {
+      setTouchGhost(null);
+    }
   };
+
+  const handleTouchEnd = (e) => {
+    if (!draggedItem) return;
+    const touch = e.changedTouches[0];
+    const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
+    const findSlot = (element) => {
+      if (!element) return null;
+      if (element.dataset.droptarget) return element.dataset;
+      return findSlot(element.parentElement);
+    };
+    const targetInfo = findSlot(dropTarget);
+    if (targetInfo) {
+      handleDropLogic(targetInfo.droptarget, targetInfo.index ? parseInt(targetInfo.index) : null);
+    }
+    handleEndDrag();
+  };
+
+  const handleDragOver = (e) => e.preventDefault();
 
   const feedbackColor = { info: 'text-blue-600', success: 'text-green-600', warning: 'text-yellow-600', error: 'text-red-600' }[feedback.type];
   
@@ -275,7 +328,7 @@ export default function App() {
         case 'manual_promo':
         case 'finished':
             return (
-                <div className="bg-gray-200 text-gray-900 min-h-screen font-sans p-4 sm:p-8 flex flex-col items-center" onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onDragEnd={handleGlobalDragEnd}>
+                <div className="bg-gray-200 text-gray-900 min-h-screen font-sans p-4 flex flex-col items-center" onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onDragEnd={handleEndDrag}>
                   {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => dispatch({ type: 'HIDE_TOAST' })} />}
                   {message && <MessageBox title={message.title} onConfirm={() => dispatch({type: 'HIDE_MESSAGE'})}>{message.content.map((text, i) => <p key={i}>{text}</p>)}</MessageBox>}
                   {newlyCreatedCard && <MessageBox title="✨ 정령 승급 성공! ✨" onConfirm={() => dispatch({type: 'CONFIRM_NEW_CARD'})} confirmText="확인"><div className="flex justify-center mt-4"><CharacterCard card={newlyCreatedCard} isNew={true} /></div></MessageBox>}
@@ -289,12 +342,10 @@ export default function App() {
                         </div>
                     </MessageBox>
                   )}
-                  {touchGhost && <CharacterCard card={touchGhost.card} isGhost={true} style={{ left: `${touchGhost.x - 48}px`, top: `${touchGhost.y - 64}px` }} />}
+                  {touchGhost && <CharacterCard card={touchGhost.card} size="large" isGhost={true} style={{ left: `${touchGhost.x}px`, top: `${touchGhost.y}px` }} />}
                   
-                  <h1 className="text-3xl md:text-4xl font-bold text-center mb-2 text-purple-600">에버소울 승급 시뮬레이터</h1>
-                  <p className="text-gray-600 text-center mb-8">목표: 에픽 {TARGET_SOUL_NAME}를 오리진 등급으로 만들기</p>
-            
-                  <div className="w-full max-w-4xl bg-gray-50 p-4 md:p-6 rounded-2xl shadow-lg border border-gray-300 mb-8">
+                  {/* 1. 헤더 제거 */}
+                  <div className="w-full max-w-4xl bg-gray-50 p-4 rounded-2xl shadow-lg border border-gray-300 mb-4">
                     <div className="flex flex-row items-center justify-center gap-1 sm:gap-4">
                       <div className="flex flex-col items-center"><p className="font-bold mb-2 text-sm md:text-base text-gray-800">승급 대상</p><div data-droptarget="mainSlot"><Slot card={mainSlot} onDrop={(e) => handleDrop(e, 'mainSlot')} onDragOver={handleDragOver} onDragStart={(e) => handleDragStart(e, mainSlot, 'mainSlot')} onTouchStart={(e) => handleTouchStart(e, mainSlot, 'mainSlot')} /></div></div>
                       <div className="text-2xl md:text-4xl font-black text-gray-400 mx-0 sm:mx-4 my-2 md:my-0">+</div>
@@ -310,9 +361,10 @@ export default function App() {
                     </div>
                   </div>
             
-                  <div data-droptarget="inventory" className="w-full max-w-5xl bg-gray-50 p-4 md:p-6 rounded-2xl shadow-lg border border-gray-300 min-h-[200px]" onDrop={(e) => handleDrop(e, 'inventory')} onDragOver={handleDragOver}>
-                    <h2 className="text-2xl font-bold mb-4 text-center text-gray-800">보유 정령</h2>
-                    {inventory.length > 0 ? (<div className="flex flex-wrap gap-2 md:gap-4 justify-center">{inventory.map(card => (<CharacterCard key={card.id} card={card} draggable="true" onDragStart={(e) => handleDragStart(e, card, 'inventory')} onTouchStart={(e) => handleTouchStart(e, card, 'inventory')} isDragging={draggedItem?.card.id === card.id} />))}</div>) : ( <p className="text-center text-gray-600 pt-8">모든 정령을 사용했습니다!</p> )}
+                  {/* 2. 보유 정령 목록 반응형 패딩 및 카드 사이즈 적용 */}
+                  <div data-droptarget="inventory" className="w-full max-w-5xl bg-gray-50 p-2 sm:p-4 md:p-6 rounded-2xl shadow-lg border border-gray-300 min-h-[200px]" onDrop={(e) => handleDrop(e, 'inventory')} onDragOver={handleDragOver}>
+                    <h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-center text-gray-800">보유 정령</h2>
+                    {inventory.length > 0 ? (<div className="flex flex-wrap gap-2 sm:gap-4 justify-center">{inventory.map(card => (<CharacterCard key={card.id} card={card} draggable="true" size="small" onDragStart={(e) => handleDragStart(e, card, 'inventory')} onTouchStart={(e) => handleTouchStart(e, card, 'inventory')} isDragging={draggedItem?.card.id === card.id} />))}</div>) : ( <p className="text-center text-gray-600 pt-8">모든 정령을 사용했습니다!</p> )}
                   </div>
             
                   <style>{`
